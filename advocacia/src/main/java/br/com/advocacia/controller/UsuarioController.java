@@ -8,6 +8,7 @@ import br.com.advocacia.controller.DTOs.UsuarioDTO;
 import br.com.advocacia.service.usuario.IUsuarioService;
 import io.github.bucket4j.Bandwidth;
 import io.github.bucket4j.Bucket;
+
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ResponseEntity;
@@ -16,6 +17,7 @@ import org.springframework.web.bind.annotation.*;
 
 import javax.validation.Valid;
 
+import java.security.Principal;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
@@ -29,11 +31,9 @@ public class UsuarioController {
     public static final String USUARIONOTFOUND = "Usuário não encontrado!";
     final IUsuarioService usuarioService;
     final PasswordEncoder passwordEncoder;
- 
-  
 
-
-
+    Bandwidth limit = Bandwidth.simple(3, Duration.ofSeconds(60));
+    Bucket bucket = Bucket.builder().addLimit(limit).build();
 
     public UsuarioController(IUsuarioService usuarioService, PasswordEncoder passwordEncoder) {
         this.usuarioService = usuarioService;
@@ -43,22 +43,25 @@ public class UsuarioController {
 
 
 
-
     @PostMapping("/login")
     public ResponseEntity<Object> realizarLogin(@RequestBody @Valid Usuario usuario){
+        
         Optional<Usuario> u = usuarioService.findByLogin(usuario.getLogin());
-
-        if(u.isEmpty()){
-            return ResponseEntity.status(HttpStatus.OK).body("Usuário não existe!");
+        if (!this.bucket.tryConsume(1)) {
+            return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS).build();
         }
+
+        // if(u.isEmpty()){
+        //     return ResponseEntity.status(HttpStatus.OK).body("Usuário não existe!");
+        // }
         
         if(u.isPresent() && usuarioService.verifyPassword(usuario.getSenha(), u.get())){
             String token = new TokenUtil().encodeToken(usuario);
             return ResponseEntity.ok(
-                new UsuarioDTO(usuario.getLogin(), usuario.getSenha(), token));
+                new UsuarioDTO(usuario.getLogin(), "", token));
         }
         
-        return ResponseEntity.status(HttpStatus.OK).body("Senha Incorreta!");
+        return ResponseEntity.status(HttpStatus.OK).body("Usuario/Senha Incorreta!");
     }
 
     @PostMapping()
@@ -95,9 +98,12 @@ public class UsuarioController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<Object> findUsuarioById(@PathVariable(value = "id") Long id){
-        Optional<Usuario> usuarioOptional = usuarioService.findById(id);
-        return usuarioOptional.<ResponseEntity<Object>>map(usuario -> ResponseEntity.status(HttpStatus.OK).body(usuario)).orElseGet(() -> ResponseEntity.status(HttpStatus.NOT_FOUND).body(new ErroDTO(404, USUARIONOTFOUND)));
+    public ResponseEntity<Object> findUsuarioById(Principal principal, @PathVariable(value = "id") Long id){
+        Optional<Usuario> usuarioOptional = usuarioService.findByLogin(principal.getName());
+        if (id.equals(usuarioOptional.get().getId())) {
+            return ResponseEntity.status(HttpStatus.OK).body(usuarioOptional.get());
+        }
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Sai fora curioso!!!");
     }
 
     @DeleteMapping("/{id}")

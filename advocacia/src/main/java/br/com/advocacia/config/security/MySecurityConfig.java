@@ -23,7 +23,7 @@ public class MySecurityConfig {
                 .authorizeHttpRequests()
                 .requestMatchers(HttpMethod.POST, "/usuario/**").permitAll()
                 .requestMatchers(HttpMethod.DELETE, "/usuario/**").permitAll()
-                .requestMatchers(HttpMethod.GET, "/usuario").permitAll()
+                .requestMatchers(HttpMethod.GET, "/usuario").authenticated()
                 .requestMatchers(HttpMethod.GET, "/empresa/**").permitAll()
                 .requestMatchers(HttpMethod.GET, "/escritorio/**").permitAll()
                 .requestMatchers(HttpMethod.GET, "/processo/**").permitAll()
