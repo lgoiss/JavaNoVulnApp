@@ -40,8 +40,8 @@ public class MySecurityConfig {
     }
 
     @Bean
-    public Pass passwordEncoder()  {
-        return new Pass();
+    public PasswordEncoder passwordEncoder()  {
+        return new BCryptPasswordEncoder();
     }
 
 }
