@@ -45,7 +45,7 @@ public class ArquivoServiceImpl implements IArquivoService{
         //pasta precisa existir e precisa ter permissão de escrita
         try{
             String pastaDestino = destinoEnvioDocumento;
-            String nome = nomeArquivo;
+            String nome = arquivo.getOriginalFilename();
             Path path = Paths.get(pastaDestino + File.separator + nome);
             Arquivo arqExist = findByPath(path.toString());
             if(arqExist == null){
